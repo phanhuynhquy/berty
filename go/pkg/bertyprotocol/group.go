@@ -187,8 +187,23 @@ func FillMessageKeysHolderUsingNewData(ctx context.Context, gc *groupContext) <-
 	ch := make(chan crypto.PubKey)
 	sub := m.Subscribe(ctx)
 
+	firstReplicatedFound := false
+	listPreviousMessages := func() {
+		subch := FillMessageKeysHolderUsingPreviousData(ctx, gc)
+		for pk := range subch {
+			ch <- pk
+		}
+	}
+
 	go func() {
 		for evt := range sub {
+			if !firstReplicatedFound {
+				if _, ok := evt.(*stores.EventReplicated); ok {
+					listPreviousMessages()
+					firstReplicatedFound = true
+					continue
+				}
+			}
 			e, ok := evt.(*bertytypes.GroupMetadataEvent)
 			if !ok {
 				continue
@@ -275,7 +290,7 @@ func activateGroupContext(ctx context.Context, gc *groupContext, contact crypto.
 	}()
 
 	go func() {
-		ch := WatchNewMembersAndSendSecrets(ctx, gc.logger, gc)
+		ch := WatchNewMembersAndSendSecrets(ctx, gc.logger, gc, contact)
 		wg.Done()
 
 		for pk := range ch {
@@ -414,12 +429,29 @@ func SendSecretsToExistingMembers(ctx context.Context, gctx *groupContext, conta
 	return ch
 }
 
-func WatchNewMembersAndSendSecrets(ctx context.Context, logger *zap.Logger, gctx *groupContext) <-chan crypto.PubKey {
+func WatchNewMembersAndSendSecrets(ctx context.Context, logger *zap.Logger, gctx *groupContext, contact crypto.PubKey) <-chan crypto.PubKey {
 	ch := make(chan crypto.PubKey)
 	sub := gctx.MetadataStore().Subscribe(ctx)
 
+	firstReplicatedFound := false
+	listPreviousMessages := func() {
+		subch := SendSecretsToExistingMembers(ctx, gctx, contact)
+		for pk := range subch {
+			// do nothing to wait it finish
+			ch <- pk
+		}
+	}
+
 	go func() {
 		for evt := range sub {
+			if !firstReplicatedFound {
+				if _, ok := evt.(*stores.EventReplicated); ok {
+					listPreviousMessages()
+					firstReplicatedFound = true
+					continue
+				}
+			}
+
 			e, ok := evt.(*bertytypes.GroupMetadataEvent)
 			if !ok {
 				continue

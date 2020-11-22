@@ -43,8 +43,8 @@ func TestMetadataStoreSecret_Basic(t *testing.T) {
 	msA := peers[0].GC.MetadataStore()
 	msB := peers[1].GC.MetadataStore()
 
-	go WatchNewMembersAndSendSecrets(ctx, logger, peers[0].GC)
-	go WatchNewMembersAndSendSecrets(ctx, logger, peers[1].GC)
+	go WatchNewMembersAndSendSecrets(ctx, logger, peers[0].GC, nil)
+	go WatchNewMembersAndSendSecrets(ctx, logger, peers[1].GC, nil)
 	go waitForBertyEventType(ctx, t, msA, bertytypes.EventTypeGroupDeviceSecretAdded, 2, secretsAdded)
 	go waitForBertyEventType(ctx, t, msB, bertytypes.EventTypeGroupDeviceSecretAdded, 2, secretsAdded)
 	inviteAllPeersToGroup(ctx, t, peers, groupSK)

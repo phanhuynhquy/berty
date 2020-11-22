@@ -948,13 +948,15 @@ func constructorFactoryGroupMetadata(s *BertyOrbitDB) iface.StoreConstructor {
 		go func() {
 			for e := range chSub {
 				var entry ipfslog.Entry
-
+				var evtType string
 				switch evt := e.(type) {
 				case *stores.EventWrite:
 					entry = evt.Entry
+					evtType = "EventWrite"
 
 				case *stores.EventReplicateProgress:
 					entry = evt.Entry
+					evtType = "EventReplicateProgress"
 
 				default:
 					continue
@@ -972,7 +974,7 @@ func constructorFactoryGroupMetadata(s *BertyOrbitDB) iface.StoreConstructor {
 					continue
 				}
 
-				store.logger.Debug("received payload", zap.String("payload", metaEvent.Metadata.EventType.String()))
+				store.logger.Debug("received payload type="+evtType, zap.String("payload", metaEvent.Metadata.EventType.String()))
 
 				store.Emit(ctx, &EventMetadataReceived{
 					MetaEvent: metaEvent,
